@@ -15,7 +15,6 @@ function Form(props) {
     props.handleSubmit(person);
     setPerson({ name: "", job: "" });
   }
-  <input type="button" value="Submit" onClick={submitForm} />
   return (
   <form>
     <label htmlFor="name">Name</label>
@@ -34,6 +33,7 @@ function Form(props) {
       value={person.job}
       onChange={handleChange}
     />
+    <input type="button" value="Submit" onClick={submitForm} />
   </form>
   );
 }
