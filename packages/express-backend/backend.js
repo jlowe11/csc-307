@@ -106,17 +106,16 @@ const users = {
   
   app.post("/users", (req, res) => {
     const userToAdd = req.body;
-    addUser(userToAdd);
-    res.status(201).send();
+    const addedUser = addUser(userToAdd);
+    res.status(201).send(addedUser);
   });
   
   app.delete("/users/:id", (req, res) => {
-    const id = req.params["id"];
-    userToDelete = findUserById(id);
+    const {id} = req.params;
+    const userToDelete = deleteUser(id);
     if (userToDelete === undefined) {
       res.status(404).send("Resource not found.");
     } else {
-      deleteUser(userToDelete);
       res.status(204).send();
     }
   });
