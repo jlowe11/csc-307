@@ -23,7 +23,7 @@ function MyApp() {
 
   function removeOneCharacter(index) {
     const user = characters[index];
-    fetch(`http://localhost:8000/users/${user.id}`, {method: 'DELETE'})
+    fetch(`http://localhost:8000/users/${user._id}`, {method: 'DELETE'})
       .then(response => {
         if (response.status === 204) { 
           const updated = characters.filter((character, i) => i !== index);

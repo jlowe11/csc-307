@@ -1,6 +1,7 @@
 // backend.js
 import express from "express";
 import cors from "cors";
+import mongoose, { get } from "mongoose";
 
 const app = express();
 const port = 8000;
@@ -19,103 +20,90 @@ app.listen(port, () => {
   );
 });
 
-const users = {
-    users_list: [
-      {
-        id: "xyz789",
-        name: "Charlie",
-        job: "Janitor"
+const UserSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    job: {
+      type: String,
+      required: true,
+      trim: true,
+      validate(value) {
+        if (value.length < 2)
+          throw new Error("Invalid job, must be at least 2 characters.");
       },
-      {
-        id: "abc123",
-        name: "Mac",
-        job: "Bouncer"
-      },
-      {
-        id: "ppp222",
-        name: "Mac",
-        job: "Professor"
-      },
-      {
-        id: "yat999",
-        name: "Dee",
-        job: "Aspring actress"
-      },
-      {
-        id: "zap555",
-        name: "Dennis",
-        job: "Bartender"
-      }
-    ]
-  };
-  const generateId = () => {
-    return `id${Math.random().toString(36).substring(2, 9)}`;
-  };
-  const findUserByName = (name) => {
-    return users["users_list"].filter(
-      (user) => user["name"] === name
-    );
-  };
-  const findUserByJob = (job) => {
-    return users["users_list"].filter(
-      (user) => user["job"] === job
-    );
-  };
+    },
+  },
+  { collection: "users" }
+);
 
-  const findUserById = (id) =>
-  users["users_list"].find((user) => user["id"] === id);
+const User = mongoose.model("User", UserSchema);
 
-  const addUser = (user) => {
-    user.id = generateId();
-    users["users_list"].push(user);
-    return user;
-  };
+export default User;
 
-  const deleteUser = (user) => {
-    users["users_list"].pop(user);
-    return user;
-  };
-  
-  app.get("/users", (req, res) => {
-    const name = req.query.name;
-    const job = req.query.job;
-    if (name != undefined) {
-      let result = findUserByName(name);
-      result = { users_list: result };
-      res.send(result);
-    } 
-    if (job != undefined) {
-        let result = findUserByJob(job)
-        result = { users_list: result };
-        res.send(result);
-    }
-    else {
-      res.send(users);
-    }
-  });
+  function findUserById(id) {
+    return User.findById(id);
+  }
+
+  function addUser(user) {
+    const userToAdd = new User(user);
+    const promise = userToAdd.save();
+    return promise;
+  }
+
+  app.get("/users?name=<name>&job=<job>", (req, res) => {
+    const { name, job } = req.query;
+    let query = {};
+    if (name) query.name = name;
+    if (job) query.job = job;
+
+    User.find(query)
+        .then(users => {
+            if (users.length === 0) {
+                res.status(404).send('No users found.');
+            } else {
+                res.send({ users_list: users });
+            }
+        })
+        .catch(error => res.status(500).send(error.message));
+});
 
   app.get("/users/:id", (req, res) => {
-    const id = req.params["id"]; //or req.params.id
-    let result = findUserById(id);
-    if (result === undefined) {
-    res.status(404).send("Resource not found.");
-    } else {
-      res.send(result);
-    }
+    findUserById(req.params.id)
+    .then(result => {
+      if (!result) {
+        res.status(404).send('Resource not found.');
+      } else {
+        res.send(result);
+      }
+    })
+    .catch(error => res.status(500).send(error.message));
   });
   
   app.post("/users", (req, res) => {
     const userToAdd = req.body;
-    const addedUser = addUser(userToAdd);
-    res.status(201).send(addedUser);
+    addUser(userToAdd)
+    .then(addedUser => {
+      res.status(201).send(addedUser); 
+    })
+    .catch(error => {
+      res.status(400).send(error.message); 
+    });
   });
   
   app.delete("/users/:id", (req, res) => {
-    const {id} = req.params;
-    const userToDelete = deleteUser(id);
-    if (userToDelete === undefined) {
-      res.status(404).send("Resource not found.");
-    } else {
-      res.status(204).send();
-    }
-  });
+    User.findByIdAndDelete(req.params.id)
+        .then(deletedUser => {
+            if (!deletedUser) {
+                res.status(404).send('Resource not found.');
+            } else {
+                res.status(204).send(); 
+            }
+        })
+        .catch(error => res.status(500).send(error.message));
+});
+
+  
